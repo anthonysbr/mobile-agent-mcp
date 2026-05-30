@@ -1,7 +1,7 @@
 {
   "name": "mobile-agent-mcp",
   "version": "0.1.1",
-  "description": "Control iOS/Android simulators and USB devices from Cursor, Claude, Codex, or shell. Maestro + adb + simctl. MCP + CLI.",
+  "description": "Drive iOS sims, Android emulators, and USB devices from Cursor, Claude, or shell. Maestro flows, screenshots, adb, simctl. MCP + CLI.",
   "license": "MIT",
   "author": {
     "name": "Anthony Batista",
@@ -23,8 +23,8 @@
     }
   },
   "bin": {
-    "mobile-agent": "./dist/cli.js",
-    "mobile-agent-mcp": "./dist/mcp-server.js"
+    "mobile-agent": "dist/cli.js",
+    "mobile-agent-mcp": "dist/mcp-server.js"
   },
   "files": [
     "dist",
