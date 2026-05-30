@@ -1,0 +1,20 @@
+{
+  "projectRoot": ".",
+  "flowsDir": "e2e/maestro/flows",
+  "screenshotDir": "artifacts/mobile-screenshots",
+  "smokeFlows": ["smoke-login", "smoke-logout"],
+  "devServerUrl": {
+    "scheme": "exp",
+    "port": 8081,
+    "hostEnv": "EXPO_DEV_HOST",
+    "outputEnvKey": "EXPO_URL"
+  },
+  "maestro": {
+    "bin": "maestro",
+    "defaultEnv": {},
+    "appId": {
+      "ios": "com.example.app.ios",
+      "android": "com.example.app"
+    }
+  }
+}
