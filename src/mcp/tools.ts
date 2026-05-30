@@ -1,5 +1,5 @@
-import type { MobileAgentRuntime } from '../runtime.js';
 import { formatError } from '../errors.js';
+import type { Runtime } from '../runtime.js';
 
 export interface McpToolDefinition {
   name: string;
@@ -95,21 +95,24 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
 ];
 
-function asRecord(value: unknown): Record<string, string> | undefined {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const entries = Object.entries(value).filter(([, v]) => typeof v === 'string') as Array<
-      [string, string]
-    >;
-    return Object.fromEntries(entries);
+function stringEnv(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
   }
-  return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, v] of Object.entries(value)) {
+    if (typeof v === 'string') {
+      out[key] = v;
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
-export async function handleMcpToolCall(
-  runtime: MobileAgentRuntime,
+export function handleMcpToolCall(
+  runtime: Runtime,
   name: string,
   args: Record<string, unknown> | undefined,
-): Promise<{ text: string; isError?: boolean }> {
+): { text: string; isError?: boolean } {
   try {
     switch (name) {
       case 'list_devices':
@@ -129,7 +132,7 @@ export async function handleMcpToolCall(
           text: runtime.runFlow(
             flow,
             typeof args?.platform === 'string' ? args.platform : undefined,
-            asRecord(args?.env),
+            stringEnv(args?.env),
           ),
         };
       }
@@ -137,7 +140,7 @@ export async function handleMcpToolCall(
         return {
           text: runtime.runSmoke(
             typeof args?.platform === 'string' ? args.platform : undefined,
-            asRecord(args?.env),
+            stringEnv(args?.env),
           ),
         };
       case 'adb_reverse': {
@@ -160,9 +163,7 @@ export async function handleMcpToolCall(
       }
       case 'open_dev_url':
         return {
-          text: runtime.openDevUrl(
-            typeof args?.platform === 'string' ? args.platform : undefined,
-          ),
+          text: runtime.openDevUrl(typeof args?.platform === 'string' ? args.platform : undefined),
         };
       default:
         throw new Error(`Unknown tool: ${name}`);

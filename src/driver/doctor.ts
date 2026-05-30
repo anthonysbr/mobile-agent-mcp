@@ -10,12 +10,7 @@ export interface DoctorCheck {
   message: string;
 }
 
-function push(
-  checks: DoctorCheck[],
-  name: string,
-  status: DoctorStatus,
-  message: string,
-): void {
+function push(checks: DoctorCheck[], name: string, status: DoctorStatus, message: string): void {
   checks.push({ name, status, message });
 }
 
@@ -25,12 +20,7 @@ export function runDoctor(config: ResolvedConfig): DoctorCheck[] {
   if (config.configPath) {
     push(checks, 'config', 'ok', `Found ${config.configPath}`);
   } else {
-    push(
-      checks,
-      'config',
-      'warn',
-      'No mobile-agent.config.json found; env vars and defaults only',
-    );
+    push(checks, 'config', 'warn', 'No mobile-agent.config.json found; env vars and defaults only');
   }
 
   if (fs.existsSync(config.flowsDir)) {

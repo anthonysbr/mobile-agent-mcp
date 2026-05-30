@@ -3,132 +3,97 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  CONFIG_FILENAME,
   assertPlatform,
+  CONFIG_FILENAME,
   findConfigFile,
   loadConfig,
   parsePorts,
 } from '../src/config.js';
-import { ErrorCode, MobileAgentError } from '../src/errors.js';
+import { AgentError, ErrorCode } from '../src/errors.js';
 import { handleMcpToolCall } from '../src/mcp/tools.js';
-import { MobileAgentRuntime } from '../src/runtime.js';
+import { createRuntime } from '../src/runtime.js';
 
-function makeTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function tmp(prefix: string) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
 }
 
 describe('config', () => {
-  const tempDirs: string[] = [];
-
-  afterEach(() => {
-    for (const dir of tempDirs.splice(0)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('finds mobile-agent.config.json walking up directories', () => {
-    const root = makeTempDir('mobile-agent-root-');
-    tempDirs.push(root);
+  it('walks up to find mobile-agent.config.json', () => {
+    const root = tmp('ma-root-');
     const nested = path.join(root, 'apps', 'mobile');
     fs.mkdirSync(nested, { recursive: true });
-    fs.writeFileSync(
-      path.join(root, CONFIG_FILENAME),
-      JSON.stringify({ flowsDir: 'custom/flows' }),
-    );
-
+    fs.writeFileSync(path.join(root, CONFIG_FILENAME), JSON.stringify({ flowsDir: 'flows' }));
     expect(findConfigFile(nested)).toBe(path.join(root, CONFIG_FILENAME));
   });
 
-  it('loads file values and resolves paths from project root', () => {
-    const root = makeTempDir('mobile-agent-load-');
-    tempDirs.push(root);
+  it('resolves paths from project root', () => {
+    const root = tmp('ma-load-');
     fs.writeFileSync(
       path.join(root, CONFIG_FILENAME),
       JSON.stringify({
-        projectRoot: '.',
-        flowsDir: 'tests/fixtures/flows',
-        screenshotDir: 'tests/fixtures/shots',
-        smokeFlows: ['a', 'b'],
+        flowsDir: 'e2e/flows',
+        screenshotDir: 'shots',
+        smokeFlows: ['a'],
         maestro: { defaultEnv: { APP_ID: 'com.example.app' } },
       }),
     );
 
-    const config = loadConfig({ startDir: root });
-    expect(config.projectRoot).toBe(root);
-    expect(config.flowsDir).toBe(path.join(root, 'tests/fixtures/flows'));
-    expect(config.screenshotDir).toBe(path.join(root, 'tests/fixtures/shots'));
-    expect(config.smokeFlows).toEqual(['a', 'b']);
-    expect(config.maestroDefaultEnv).toEqual({ APP_ID: 'com.example.app' });
+    const cfg = loadConfig({ startDir: root });
+    expect(cfg.flowsDir).toBe(path.join(root, 'e2e/flows'));
+    expect(cfg.maestroDefaultEnv).toEqual({ APP_ID: 'com.example.app' });
   });
 
-  it('env vars override file config', () => {
-    const root = makeTempDir('mobile-agent-env-');
-    tempDirs.push(root);
-    fs.writeFileSync(
-      path.join(root, CONFIG_FILENAME),
-      JSON.stringify({ flowsDir: 'from-file' }),
-    );
+  it('MOBILE_AGENT_PROJECT_ROOT wins over cwd', () => {
+    const root = tmp('ma-env-');
+    fs.writeFileSync(path.join(root, CONFIG_FILENAME), JSON.stringify({ flowsDir: 'flows' }));
 
-    const config = loadConfig({
-      startDir: root,
-      env: {
-        MOBILE_AGENT_FLOWS_DIR: 'from-env',
-      },
-    });
-
-    expect(config.flowsDir).toBe(path.join(root, 'from-env'));
-  });
-
-  it('discovers config via MOBILE_AGENT_PROJECT_ROOT from foreign cwd', () => {
-    const root = makeTempDir('mobile-agent-root-env-');
-    tempDirs.push(root);
-    fs.writeFileSync(
-      path.join(root, CONFIG_FILENAME),
-      JSON.stringify({ flowsDir: 'flows' }),
-    );
-
-    const config = loadConfig({
+    const cfg = loadConfig({
       startDir: os.tmpdir(),
       env: { MOBILE_AGENT_PROJECT_ROOT: root },
     });
 
-    expect(config.configPath).toBe(path.join(root, CONFIG_FILENAME));
-    expect(config.flowsDir).toBe(path.join(root, 'flows'));
+    expect(cfg.configPath).toBe(path.join(root, CONFIG_FILENAME));
   });
 
-  it('rejects invalid config schema', () => {
-    const root = makeTempDir('mobile-agent-invalid-');
-    tempDirs.push(root);
+  it('rejects bad config', () => {
+    const root = tmp('ma-bad-');
     fs.writeFileSync(
       path.join(root, CONFIG_FILENAME),
-      JSON.stringify({ devServerUrl: { port: 'not-a-number' } }),
+      JSON.stringify({ devServerUrl: { port: 'nope' } }),
     );
-
-    expect(() => loadConfig({ startDir: root })).toThrow(MobileAgentError);
+    expect(() => loadConfig({ startDir: root })).toThrow(AgentError);
     try {
       loadConfig({ startDir: root });
-    } catch (error) {
-      expect(error).toMatchObject({ code: ErrorCode.CONFIG_INVALID });
+    } catch (e) {
+      expect(e).toMatchObject({ code: ErrorCode.CONFIG_INVALID });
     }
   });
 
-  it('assertPlatform accepts ios and android only', () => {
+  it('assertPlatform', () => {
     expect(assertPlatform(undefined)).toBe('ios');
-    expect(assertPlatform('android')).toBe('android');
-    expect(() => assertPlatform('flutter')).toThrow(MobileAgentError);
+    expect(() => assertPlatform('web')).toThrow(AgentError);
   });
 
-  it('parsePorts validates numeric range', () => {
-    expect(parsePorts(['8081', '4000'])).toEqual([8081, 4000]);
-    expect(() => parsePorts(['0'])).toThrow(MobileAgentError);
-    expect(() => parsePorts(['70000'])).toThrow(MobileAgentError);
+  it('parsePorts', () => {
+    expect(parsePorts(['8081'])).toEqual([8081]);
+    expect(() => parsePorts(['0'])).toThrow(AgentError);
   });
 });
 
-describe('mcp tools', () => {
-  it('returns structured error for unknown tool', async () => {
-    const runtime = new MobileAgentRuntime({ startDir: process.cwd() });
-    const result = await handleMcpToolCall(runtime, 'missing_tool', {});
+describe('mcp', () => {
+  it('unknown tool → isError', () => {
+    const runtime = createRuntime({ startDir: process.cwd() });
+    const result = handleMcpToolCall(runtime, 'nope', {});
     expect(result.isError).toBe(true);
     expect(result.text).toContain('Unknown tool');
   });

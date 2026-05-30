@@ -88,9 +88,7 @@ program
   .description('Run one Maestro flow')
   .action((flow, platform, options, command) => {
     try {
-      printResult(
-        createCliRuntime(command).runFlow(flow, platform, parseEnvPairs(options.env)),
-      );
+      printResult(createCliRuntime(command).runFlow(flow, platform, parseEnvPairs(options.env)));
     } catch (error) {
       printError(error);
     }

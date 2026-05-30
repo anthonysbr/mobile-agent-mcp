@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Platform, ResolvedConfig } from '../config.js';
-import { ErrorCode, MobileAgentError } from '../errors.js';
+import { AgentError, ErrorCode } from '../errors.js';
 import { runCommand } from './exec.js';
 
 export function captureScreenshot(config: ResolvedConfig, platform: Platform): string {
@@ -11,7 +11,7 @@ export function captureScreenshot(config: ResolvedConfig, platform: Platform): s
 
   if (platform === 'ios') {
     if (process.platform !== 'darwin') {
-      throw new MobileAgentError(
+      throw new AgentError(
         'iOS screenshots require macOS with xcrun simctl',
         ErrorCode.TOOL_UNAVAILABLE,
       );
@@ -23,7 +23,7 @@ export function captureScreenshot(config: ResolvedConfig, platform: Platform): s
       encoding: 'buffer',
     });
     if (result.status !== 0 || !result.stdoutBuffer?.length) {
-      throw new MobileAgentError(
+      throw new AgentError(
         result.stderr || result.stdout || 'adb screencap failed',
         ErrorCode.COMMAND_FAILED,
       );

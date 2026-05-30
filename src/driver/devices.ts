@@ -5,12 +5,16 @@ export function listDevices(): string {
 
   if (process.platform === 'darwin') {
     sections.push('=== iOS Simulators (booted) ===');
-    const booted = runCommand('xcrun', ['simctl', 'list', 'devices', 'booted'], { allowFailure: true });
+    const booted = runCommand('xcrun', ['simctl', 'list', 'devices', 'booted'], {
+      allowFailure: true,
+    });
     sections.push(booted.stdout || booted.stderr || '(none)');
 
     sections.push('');
     sections.push('=== iOS Simulators (available) ===');
-    const available = runCommand('xcrun', ['simctl', 'list', 'devices', 'available'], { allowFailure: true });
+    const available = runCommand('xcrun', ['simctl', 'list', 'devices', 'available'], {
+      allowFailure: true,
+    });
     const filtered = available.stdout
       .split('\n')
       .filter((line) => /iPhone|iPad/.test(line))

@@ -1,6 +1,6 @@
 {
   "name": "mobile-agent-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Control iOS/Android simulators and USB devices from Cursor, Claude, Codex, or shell. Maestro + adb + simctl. MCP + CLI.",
   "license": "MIT",
   "author": {
@@ -31,6 +31,7 @@
     "LICENSE",
     "NOTICE",
     "README.md",
+    "CHANGELOG.md",
     "mobile-agent.config.example.json"
   ],
   "engines": {
@@ -42,7 +43,9 @@
     "start:mcp": "node dist/mcp-server.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "lint": "biome check src tests",
+    "format": "biome check --write src tests",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
@@ -51,6 +54,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.16",
     "@types/node": "^22.13.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

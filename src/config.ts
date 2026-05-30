@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
-import { ErrorCode, MobileAgentError } from './errors.js';
+import { AgentError, ErrorCode } from './errors.js';
 
 export const CONFIG_FILENAME = 'mobile-agent.config.json';
 
@@ -56,10 +56,10 @@ function readConfigFile(filePath: string): MobileAgentConfigFile {
   try {
     raw = fs.readFileSync(filePath, 'utf-8');
   } catch (error) {
-    throw new MobileAgentError(
+    throw new AgentError(
       `Unable to read ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
       ErrorCode.CONFIG_INVALID,
-      { cause: error },
+      error,
     );
   }
 
@@ -67,10 +67,10 @@ function readConfigFile(filePath: string): MobileAgentConfigFile {
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new MobileAgentError(
+    throw new AgentError(
       `Invalid JSON in ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
       ErrorCode.CONFIG_INVALID,
-      { cause: error },
+      error,
     );
   }
 
@@ -79,7 +79,7 @@ function readConfigFile(filePath: string): MobileAgentConfigFile {
     const details = result.error.issues
       .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
       .join('; ');
-    throw new MobileAgentError(
+    throw new AgentError(
       `Invalid ${CONFIG_FILENAME} at ${filePath}: ${details}`,
       ErrorCode.CONFIG_INVALID,
     );
@@ -115,8 +115,6 @@ export interface LoadConfigOptions {
   startDir?: string;
   overrides?: Partial<ResolvedConfig>;
   env?: NodeJS.ProcessEnv;
-  /** When true, warn via thrown error if flowsDir does not exist. */
-  strictPaths?: boolean;
 }
 
 export function loadConfig(options: LoadConfigOptions = {}): ResolvedConfig {
@@ -145,13 +143,6 @@ export function loadConfig(options: LoadConfigOptions = {}): ResolvedConfig {
     DEFAULT_SCREENSHOT_DIR,
   );
 
-  if (options.strictPaths && !fs.existsSync(flowsDir)) {
-    throw new MobileAgentError(
-      `flowsDir does not exist: ${flowsDir}. Set MOBILE_AGENT_FLOWS_DIR or update ${CONFIG_FILENAME}.`,
-      ErrorCode.CONFIG_INVALID,
-    );
-  }
-
   const maestroBin = env.MAESTRO_BIN ?? fileConfig.maestro?.bin ?? 'maestro';
   const maestroDefaultEnv = fileConfig.maestro?.defaultEnv ?? {};
   const maestroAppIds = fileConfig.maestro?.appId ?? {};
@@ -177,14 +168,14 @@ export function loadConfig(options: LoadConfigOptions = {}): ResolvedConfig {
   return resolved;
 }
 
-export function assertPlatform(value: string | undefined, fallback: Platform = 'ios'): Platform {
+export function assertPlatform(value: string | undefined): Platform {
   if (!value || value === 'ios') {
     return 'ios';
   }
   if (value === 'android') {
     return 'android';
   }
-  throw new MobileAgentError(
+  throw new AgentError(
     `Unknown platform: ${value} (use ios or android)`,
     ErrorCode.PLATFORM_INVALID,
   );
@@ -195,10 +186,7 @@ export function parseEnvPairs(pairs: string[] | undefined): Record<string, strin
   for (const pair of pairs ?? []) {
     const index = pair.indexOf('=');
     if (index <= 0) {
-      throw new MobileAgentError(
-        `Invalid env pair: ${pair} (expected KEY=VALUE)`,
-        ErrorCode.VALIDATION,
-      );
+      throw new AgentError(`Invalid env pair: ${pair} (expected KEY=VALUE)`, ErrorCode.VALIDATION);
     }
     env[pair.slice(0, index)] = pair.slice(index + 1);
   }
@@ -210,7 +198,7 @@ export function parsePorts(ports: string[]): number[] {
   return portArgs.map((port) => {
     const value = Number(port);
     if (!Number.isInteger(value) || value <= 0 || value > 65535) {
-      throw new MobileAgentError(`Invalid port: ${port}`, ErrorCode.VALIDATION);
+      throw new AgentError(`Invalid port: ${port}`, ErrorCode.VALIDATION);
     }
     return value;
   });

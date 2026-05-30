@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Platform, ResolvedConfig } from '../config.js';
-import { ErrorCode, MobileAgentError } from '../errors.js';
-import { commandExists, runCommand } from './exec.js';
+import { AgentError, ErrorCode } from '../errors.js';
 import { resolveDevServerEnv } from './dev-server.js';
+import { commandExists, runCommand } from './exec.js';
 import { captureScreenshot } from './screenshot.js';
 
 export interface RunFlowOptions {
@@ -27,7 +27,7 @@ function resolveFlowPath(config: ResolvedConfig, flow: string): string {
     return bare;
   }
 
-  throw new MobileAgentError(
+  throw new AgentError(
     `Flow not found: ${flow} (looked in ${config.flowsDir})`,
     ErrorCode.FLOW_NOT_FOUND,
   );
@@ -35,7 +35,7 @@ function resolveFlowPath(config: ResolvedConfig, flow: string): string {
 
 export function requireMaestro(bin: string): void {
   if (!commandExists(bin)) {
-    throw new MobileAgentError(
+    throw new AgentError(
       `Maestro not found (${bin}). Install: curl -Ls "https://get.maestro.mobile.dev" | bash`,
       ErrorCode.MAESTRO_NOT_FOUND,
     );
@@ -67,12 +67,7 @@ export function runMaestroFlow(config: ResolvedConfig, options: RunFlowOptions):
 
   args.push(flowPath);
 
-  const header = [
-    `[mobile-agent] Running ${flowPath}`,
-    `[mobile-agent] platform=${platform}`,
-    `[mobile-agent] projectRoot=${config.projectRoot}`,
-    `[mobile-agent] env=${Object.keys(mergedEnv).join(', ') || '(none)'}`,
-  ].join('\n');
+  const header = `${flowPath} (${platform})`;
 
   const timeoutMs = Number(process.env.MAESTRO_TIMEOUT_MS ?? DEFAULT_MAESTRO_TIMEOUT_MS);
   const result = runCommand(config.maestroBin, args, {
@@ -85,14 +80,14 @@ export function runMaestroFlow(config: ResolvedConfig, options: RunFlowOptions):
     try {
       captureScreenshot(config, platform);
     } catch {
-      // Screenshot failure should not mask flow result.
+      /* ignore */
     }
   }
 
   const output = [header, result.stdout, result.stderr].filter(Boolean).join('\n');
 
   if (result.status !== 0) {
-    throw new MobileAgentError(
+    throw new AgentError(
       output || `Maestro exited with code ${result.status}`,
       ErrorCode.COMMAND_FAILED,
     );

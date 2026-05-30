@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { handleMcpToolCall, MCP_TOOLS } from './mcp/tools.js';
 import { createRuntime } from './runtime.js';
 import { PACKAGE_NAME, PACKAGE_VERSION } from './version.js';
@@ -22,7 +19,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  const result = await handleMcpToolCall(
+  const result = handleMcpToolCall(
     runtime,
     name,
     (args as Record<string, unknown> | undefined) ?? undefined,
@@ -39,13 +36,12 @@ async function main(): Promise<void> {
   await server.connect(transport);
 }
 
-function shutdown(signal: string): void {
-  process.stderr.write(`[${PACKAGE_NAME}] received ${signal}, shutting down\n`);
+function shutdown(): void {
   process.exit(0);
 }
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 main().catch((error) => {
   process.stderr.write(

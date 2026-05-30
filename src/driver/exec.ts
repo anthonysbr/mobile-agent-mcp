@@ -1,6 +1,6 @@
-import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process';
+import { type SpawnSyncOptionsWithStringEncoding, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { ErrorCode, MobileAgentError } from '../errors.js';
+import { AgentError, ErrorCode } from '../errors.js';
 
 export interface CommandResult {
   stdout: string;
@@ -55,29 +55,29 @@ export function runCommand(
   if (result.error) {
     const code =
       result.error.name === 'ENOENT' ? ErrorCode.TOOL_UNAVAILABLE : ErrorCode.COMMAND_FAILED;
-    throw new MobileAgentError(
-      `Failed to run ${command}: ${result.error.message}`,
-      code,
-      { cause: result.error },
-    );
+    throw new AgentError(`Failed to run ${command}: ${result.error.message}`, code, result.error);
   }
 
   const stdoutBuffer = Buffer.isBuffer(result.stdout) ? result.stdout : undefined;
   const stdout =
-    typeof result.stdout === 'string' ? result.stdout.trim() : stdoutBuffer?.length ? '[binary]' : '';
+    typeof result.stdout === 'string'
+      ? result.stdout.trim()
+      : stdoutBuffer?.length
+        ? '[binary]'
+        : '';
   const stderr = typeof result.stderr === 'string' ? result.stderr.trim() : '';
   const status = result.status;
   const commandResult: CommandResult = { stdout, stderr, status, stdoutBuffer };
 
   if (result.signal === 'SIGTERM' || result.signal === 'SIGKILL') {
-    throw new MobileAgentError(
+    throw new AgentError(
       `Command timed out after ${options.timeoutMs}ms: ${command} ${args.join(' ')}`,
       ErrorCode.COMMAND_FAILED,
     );
   }
 
   if (status !== 0 && !options.allowFailure) {
-    throw new MobileAgentError(
+    throw new AgentError(
       formatCommandFailure(command, args, commandResult),
       ErrorCode.COMMAND_FAILED,
     );

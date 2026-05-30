@@ -1,11 +1,4 @@
 mobile-agent-mcp
-Copyright (c) 2026 Anthony Batista
-https://entkreis.de
+Copyright (c) 2026 Anthony Batista · https://entkreis.de
 
-If you use or fork this project, keep the copyright notice from LICENSE
-and link back to the original repository when you ship something public
-(a tool, a blog post, a fork, a product that bundles this code).
-
-Commercial use is allowed under the MIT License. If you want to use it
-in a commercial product or service, a heads-up to the author is appreciated
-(not required by the license).
+Keep the LICENSE notice if you redistribute or fork. MIT allows commercial use; a link back is appreciated.
