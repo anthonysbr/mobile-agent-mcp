@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { Command } from 'commander';
-import { parseEnvPairs, parsePorts } from './config.js';
+import { parseEnvPairs, parseLogSource, parsePorts } from './config.js';
 import { formatError, getExitCode } from './errors.js';
 import { createRuntime } from './runtime.js';
 import { PACKAGE_NAME, PACKAGE_VERSION } from './version.js';
@@ -45,10 +45,11 @@ function createCliRuntime(command: Command) {
 program
   .command('doctor')
   .description('Sanity check before running flows')
-  .action((_args, command) => {
+  .option('--json', 'Print JSON instead of text')
+  .action((options, command) => {
     try {
       const runtime = createCliRuntime(command);
-      printResult(runtime.doctor());
+      printResult(options.json ? runtime.doctorJson() : runtime.doctor());
       if (runtime.doctorFailed()) {
         process.exit(4);
       }
@@ -63,6 +64,42 @@ program
   .action((_args, command) => {
     try {
       printResult(createCliRuntime(command).listDevices());
+    } catch (error) {
+      printError(error);
+    }
+  });
+
+program
+  .command('list-flows')
+  .description('List Maestro flow names in flowsDir')
+  .action((_args, command) => {
+    try {
+      printResult(createCliRuntime(command).listFlows());
+    } catch (error) {
+      printError(error);
+    }
+  });
+
+program
+  .command('logs')
+  .argument('[platform]', 'ios or android', 'ios')
+  .option('--lines <n>', 'Number of lines to return', '100')
+  .option('--source <source>', 'metro, logcat, sim, or auto', 'auto')
+  .option('--follow', 'Stream logs until Ctrl+C')
+  .description('Tail Metro, logcat, or iOS sim logs')
+  .action(async (platform, options, command) => {
+    try {
+      const runtime = createCliRuntime(command);
+      const source = parseLogSource(options.source);
+      const lines = Number(options.lines);
+
+      if (options.follow) {
+        const code = await runtime.tailLogsFollow(platform, source);
+        process.exit(code === 0 ? 0 : 6);
+        return;
+      }
+
+      printResult(runtime.tailLogs(platform, source, Number.isFinite(lines) ? lines : 100));
     } catch (error) {
       printError(error);
     }

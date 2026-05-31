@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import type { ResolvedConfig } from '../config.js';
 import { commandExists, runCommand } from './exec.js';
+import { checkLogcatAvailable, checkMetroLog, checkSimLogAvailable } from './logs.js';
 
 export type DoctorStatus = 'ok' | 'warn' | 'fail';
 
@@ -82,6 +83,17 @@ export function runDoctor(config: ResolvedConfig): DoctorCheck[] {
     push(checks, 'smokeFlows', 'warn', 'Nothing in smokeFlows; run-all will fail');
   }
 
+  if (config.log) {
+    const metro = checkMetroLog(config);
+    push(checks, 'log.metro', metro.ok ? 'ok' : 'warn', metro.message);
+
+    const logcat = checkLogcatAvailable();
+    push(checks, 'log.logcat', logcat.ok ? 'ok' : 'warn', logcat.message);
+
+    const sim = checkSimLogAvailable();
+    push(checks, 'log.sim', sim.ok ? 'ok' : 'warn', sim.message);
+  }
+
   return checks;
 }
 
@@ -95,4 +107,8 @@ export function formatDoctorReport(checks: DoctorCheck[]): string {
 
 export function doctorHasFailures(checks: DoctorCheck[]): boolean {
   return checks.some((check) => check.status === 'fail');
+}
+
+export function formatDoctorJson(checks: DoctorCheck[]): string {
+  return JSON.stringify({ checks }, null, 2);
 }

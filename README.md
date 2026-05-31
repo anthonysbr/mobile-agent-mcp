@@ -1,8 +1,28 @@
 # mobile-agent-mcp
 
-Drive **iOS simulators, Android emulators, and USB devices** from Cursor, Claude, Codex, or a shell. Maestro runs your flows; this package handles the host side: list devices, screenshots, deep links, `adb reverse`, per-repo config.
+Drive **iOS simulators, Android emulators, and USB devices** from Cursor, Claude, or a shell. Maestro runs your flows; this package handles the host side: list devices, screenshots, deep links, `adb reverse`, logs, per-repo config.
 
 No Expo or Flutter lock-in. Your Maestro YAML and env vars live in your project.
+
+## When to use this
+
+- You already have Maestro YAML in the repo
+- You want smoke flows and config per project, not a generic tap-by-coordinates MCP
+- You want the same commands from CLI, MCP, or shell
+
+Need native taps without Maestro? Look at [`@mobilenext/mobile-mcp`](https://www.npmjs.com/package/@mobilenext/mobile-mcp) instead.
+
+## Quick start
+
+```bash
+npm install -D mobile-agent-mcp
+mobile-agent doctor
+mobile-agent devices
+mobile-agent open-dev-url ios
+mobile-agent logs ios --lines 50 --source sim
+mobile-agent run smoke-login ios
+mobile-agent screenshot ios
+```
 
 ## Install
 
@@ -25,6 +45,11 @@ Put `mobile-agent.config.json` in the repo root. Example: [`mobile-agent.config.
   "maestro": {
     "bin": "maestro",
     "defaultEnv": { "APP_ID": "com.example.app" }
+  },
+  "log": {
+    "androidPackage": "com.example.app",
+    "metroPort": 8081,
+    "filters": ["ReactNativeJS", "ERROR"]
   }
 }
 ```
@@ -50,7 +75,11 @@ Run `mobile-agent doctor` before a long session. Saves guessing why nothing boot
 
 ```bash
 mobile-agent doctor
+mobile-agent doctor --json
 mobile-agent devices
+mobile-agent list-flows
+mobile-agent logs ios --lines 100 --source sim
+mobile-agent logs android --source logcat --follow
 mobile-agent screenshot ios
 mobile-agent run my-flow ios -e APP_ID=com.example.app
 mobile-agent run-all ios
@@ -69,12 +98,14 @@ mobile-agent-mcp
 
 | Tool | What it does |
 |------|----------------|
-| `doctor` | Config, flows dir, Maestro, adb/simctl |
+| `doctor` | Config, flows dir, Maestro, adb/simctl, log sources |
 | `list_devices` | Sims, USB, Maestro version |
+| `list_flows` | Flow names in `flowsDir` |
+| `tail_logs` | Recent Metro/logcat/sim logs (snapshot) |
 | `screenshot` | PNG path |
 | `run_maestro_flow` | One flow from `flowsDir` |
 | `run_smoke_flows` | All `smokeFlows` |
-| `adb_reverse` | USB Android → localhost ports |
+| `adb_reverse` | USB Android to localhost ports |
 | `open_url` | Any deep link |
 | `open_dev_url` | URL from config |
 
@@ -107,9 +138,10 @@ import { createRuntime } from 'mobile-agent-mcp';
 
 const agent = createRuntime();
 agent.doctor();
+agent.tailLogs('ios', 'sim', 100);
 agent.screenshot('ios');
 ```
 
 ## Roadmap
 
-[`ROADMAP.md`](ROADMAP.md): next up **`tail_logs`** (Metro, logcat, iOS sim logs).
+[`ROADMAP.md`](ROADMAP.md): shipped `tail_logs` in v0.2.

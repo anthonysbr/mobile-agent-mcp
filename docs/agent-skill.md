@@ -11,9 +11,18 @@ Maestro installed. `mobile-agent.config.json` in the repo. Metro/API up if the f
 ```bash
 mobile-agent doctor          # stop on FAIL
 mobile-agent devices
+mobile-agent list-flows
 mobile-agent open-dev-url ios   # skip if the flow launches the app
 mobile-agent run smoke-login ios -e APP_ID=com.example.app
 mobile-agent screenshot ios
+mobile-agent logs ios --lines 100 --source sim
+```
+
+If the flow fails, read logs before editing code:
+
+```bash
+mobile-agent logs android --source logcat --lines 150
+mobile-agent logs ios --source sim --lines 150
 ```
 
 All flows in config:
@@ -34,6 +43,9 @@ MAESTRO_DEVICE=<serial> mobile-agent run smoke-login android
 | Shell | MCP |
 |-------|-----|
 | `doctor` | `doctor` |
+| `doctor --json` | `doctor` `{ "json": true }` |
+| `list-flows` | `list_flows` |
+| `logs ios --source sim` | `tail_logs` `{ "platform": "ios", "source": "sim", "lines": 100 }` |
 | `devices` | `list_devices` |
 | `screenshot ios` | `screenshot` `{ "platform": "ios" }` |
 | `run foo ios` | `run_maestro_flow` `{ "flow": "foo", "platform": "ios" }` |
@@ -46,12 +58,9 @@ MAESTRO_DEVICE=<serial> mobile-agent run smoke-login android
 
 - `[CONFIG_INVALID]`: fix JSON in config
 - `[MAESTRO_NOT_FOUND]`: install Maestro
-- `[FLOW_NOT_FOUND]`: wrong name or `flowsDir`
+- `[FLOW_NOT_FOUND]`: wrong name or `flowsDir`; try `list-flows`
+- `[LOG_SOURCE_UNAVAILABLE]`: Metro not running or wrong port in `log.metroPort`
 - iOS screenshot fails: boot the Simulator first
 - Android can't reach Metro: `adb-reverse` on 8081 (and API port if needed)
 
 Don't commit screenshots with real user data on screen.
-
-## v0.2
-
-`tail_logs` for Metro / logcat / sim logs. See [`ROADMAP.md`](../ROADMAP.md).

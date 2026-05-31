@@ -6,19 +6,22 @@ Not CI, not a device farm, not pixel-diff regression.
 
 ## v0.1 · shipped
 
-MCP + CLI, `mobile-agent.config.json`, doctor/devices/screenshot/flows/adb/open-url.
+MCP + CLI, `mobile-agent.config.json`, doctor/devices/screenshot/flows/adb/open-url. Published on npm.
 
-## v0.2 · next
+## v0.2 · shipped
 
-**`tail_logs`**: Metro console, `adb logcat`, iOS sim `log stream`.
+**`tail_logs`**: Metro check, Android logcat, iOS sim logs.
 
-- MCP tool + CLI `mobile-agent logs [platform]` (`--lines`, `--follow`, `--source`)
-- Optional `log` block in config (package id, Metro port, filters)
-- Docs update in `docs/agent-skill.md`
+- MCP tool `tail_logs` + CLI `mobile-agent logs`
+- Config `log` block (package id, Metro port, filters)
+- Doctor checks log sources
+- `list_flows`, `doctor --json`
 
-## v0.3
+## v0.3 · next
 
-npm publish polish, doctor checks for log sources, tighter getting-started copy.
+- MCP resource for latest screenshot (where clients support it)
+- Trusted npm publish from CI
+- More example configs (Expo, bare RN)
 
 ## Not planned (for now)
 
@@ -26,4 +29,4 @@ Visual diff suites, multi-device farms, replacing Maestro for taps, Rust/Go rewr
 
 ## Done when
 
-An agent can: `doctor` → `screenshot` → `tail_logs` → `run_maestro_flow` → repeat until green.
+An agent can: `doctor` → `tail_logs` → `run_maestro_flow` → `screenshot` → repeat until green.

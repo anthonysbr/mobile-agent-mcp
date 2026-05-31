@@ -7,6 +7,7 @@ export enum ErrorCode {
   TOOL_UNAVAILABLE = 'TOOL_UNAVAILABLE',
   VALIDATION = 'VALIDATION',
   NOT_CONFIGURED = 'NOT_CONFIGURED',
+  LOG_SOURCE_UNAVAILABLE = 'LOG_SOURCE_UNAVAILABLE',
 }
 
 const exitCodes: Partial<Record<ErrorCode, number>> = {
@@ -17,6 +18,7 @@ const exitCodes: Partial<Record<ErrorCode, number>> = {
   [ErrorCode.COMMAND_FAILED]: 6,
   [ErrorCode.TOOL_UNAVAILABLE]: 4,
   [ErrorCode.NOT_CONFIGURED]: 2,
+  [ErrorCode.LOG_SOURCE_UNAVAILABLE]: 6,
 };
 
 export class AgentError extends Error {
@@ -32,8 +34,6 @@ export class AgentError extends Error {
     return exitCodes[this.code] ?? 1;
   }
 }
-
-export const MobileAgentError = AgentError;
 
 export function formatError(error: unknown): string {
   if (error instanceof AgentError) {

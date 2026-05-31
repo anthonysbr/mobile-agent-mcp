@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import type { LogSource } from './driver/logs.js';
 import { AgentError, ErrorCode } from './errors.js';
 
 export const CONFIG_FILENAME = 'mobile-agent.config.json';
@@ -14,12 +15,19 @@ const DevServerUrlSchema = z.object({
   outputEnvKey: z.string().min(1).optional(),
 });
 
+const LogConfigSchema = z.object({
+  androidPackage: z.string().min(1).optional(),
+  metroPort: z.number().int().positive().max(65535).optional(),
+  filters: z.array(z.string().min(1)).optional(),
+});
+
 const ConfigFileSchema = z.object({
   projectRoot: z.string().min(1).optional(),
   flowsDir: z.string().min(1).optional(),
   screenshotDir: z.string().min(1).optional(),
   smokeFlows: z.array(z.string().min(1)).optional(),
   devServerUrl: DevServerUrlSchema.optional(),
+  log: LogConfigSchema.optional(),
   maestro: z
     .object({
       bin: z.string().min(1).optional(),
@@ -45,6 +53,7 @@ export interface ResolvedConfig {
   maestroDefaultEnv: Record<string, string>;
   maestroAppIds: Partial<Record<Platform, string>>;
   devServerUrl: MobileAgentConfigFile['devServerUrl'];
+  log: MobileAgentConfigFile['log'];
   configPath: string | null;
 }
 
@@ -147,6 +156,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ResolvedConfig {
   const maestroDefaultEnv = fileConfig.maestro?.defaultEnv ?? {};
   const maestroAppIds = fileConfig.maestro?.appId ?? {};
   const devServerUrl = fileConfig.devServerUrl;
+  const log = fileConfig.log;
   const smokeFlows = fileConfig.smokeFlows ?? [];
 
   const resolved: ResolvedConfig = {
@@ -158,6 +168,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ResolvedConfig {
     maestroDefaultEnv,
     maestroAppIds,
     devServerUrl,
+    log,
     configPath,
   };
 
@@ -202,4 +213,17 @@ export function parsePorts(ports: string[]): number[] {
     }
     return value;
   });
+}
+
+export function parseLogSource(value: string | undefined): LogSource {
+  if (!value || value === 'auto') {
+    return 'auto';
+  }
+  if (value === 'metro' || value === 'logcat' || value === 'sim') {
+    return value;
+  }
+  throw new AgentError(
+    `Unknown log source: ${value} (use metro, logcat, sim, or auto)`,
+    ErrorCode.VALIDATION,
+  );
 }

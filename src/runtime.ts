@@ -5,9 +5,12 @@ import { listDevices } from './driver/devices.js';
 import {
   type DoctorCheck,
   doctorHasFailures,
+  formatDoctorJson,
   formatDoctorReport,
   runDoctor,
 } from './driver/doctor.js';
+import { formatFlowList, listFlows } from './driver/flows.js';
+import { type LogSource, tailLogs, tailLogsFollow } from './driver/logs.js';
 import { runMaestroFlow, runMaestroFlows } from './driver/maestro.js';
 import { openUrl } from './driver/open-url.js';
 import { captureScreenshot } from './driver/screenshot.js';
@@ -29,8 +32,28 @@ export class Runtime {
     return listDevices();
   }
 
+  listFlows() {
+    const config = this.cfg();
+    return formatFlowList(config.flowsDir, listFlows(config.flowsDir));
+  }
+
   screenshot(platform?: string) {
     return captureScreenshot(this.cfg(), assertPlatform(platform));
+  }
+
+  tailLogs(platform?: string, source?: LogSource, lines?: number) {
+    return tailLogs(this.cfg(), {
+      platform: assertPlatform(platform),
+      source,
+      lines,
+    });
+  }
+
+  tailLogsFollow(platform?: string, source?: LogSource) {
+    return tailLogsFollow(this.cfg(), {
+      platform: assertPlatform(platform),
+      source,
+    });
   }
 
   runFlow(flow: string, platform?: string, env?: Record<string, string>) {
@@ -77,6 +100,11 @@ export class Runtime {
     return formatDoctorReport(this.lastDoctor);
   }
 
+  doctorJson() {
+    this.lastDoctor = runDoctor(this.cfg());
+    return formatDoctorJson(this.lastDoctor);
+  }
+
   doctorFailed() {
     const checks = this.lastDoctor ?? runDoctor(this.cfg());
     return doctorHasFailures(checks);
@@ -86,5 +114,3 @@ export class Runtime {
 export function createRuntime(options?: LoadConfigOptions) {
   return new Runtime(options);
 }
-
-export const MobileAgentRuntime = Runtime;

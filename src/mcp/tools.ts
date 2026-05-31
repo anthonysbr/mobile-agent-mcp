@@ -1,3 +1,4 @@
+import type { LogSource } from '../driver/logs.js';
 import { formatError } from '../errors.js';
 import type { Runtime } from '../runtime.js';
 
@@ -16,7 +17,29 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'doctor',
     description: 'Run before a long flow. OK/WARN/FAIL on config, flows, tools.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        json: { type: 'boolean' },
+      },
+    },
+  },
+  {
+    name: 'list_flows',
+    description: 'Maestro flow names available under flowsDir.',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'tail_logs',
+    description: 'Recent Metro, logcat, or iOS sim logs. Snapshot only (no follow).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', enum: ['ios', 'android'] },
+        source: { type: 'string', enum: ['metro', 'logcat', 'sim', 'auto'] },
+        lines: { type: 'number' },
+      },
+    },
   },
   {
     name: 'screenshot',
@@ -30,7 +53,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
   {
     name: 'run_maestro_flow',
-    description: 'Flow name or path under flowsDir. Extra env merges with config.',
+    description: 'Flow name or path under flowsDir. Captures screenshot after run when possible.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -108,6 +131,13 @@ function stringEnv(value: unknown): Record<string, string> | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+function parseLogSourceArg(value: unknown): LogSource | undefined {
+  if (value === 'metro' || value === 'logcat' || value === 'sim' || value === 'auto') {
+    return value;
+  }
+  return undefined;
+}
+
 export function handleMcpToolCall(
   runtime: Runtime,
   name: string,
@@ -118,7 +148,20 @@ export function handleMcpToolCall(
       case 'list_devices':
         return { text: runtime.listDevices() };
       case 'doctor':
-        return { text: runtime.doctor(), isError: runtime.doctorFailed() };
+        return {
+          text: args?.json === true ? runtime.doctorJson() : runtime.doctor(),
+          isError: runtime.doctorFailed(),
+        };
+      case 'list_flows':
+        return { text: runtime.listFlows() };
+      case 'tail_logs':
+        return {
+          text: runtime.tailLogs(
+            typeof args?.platform === 'string' ? args.platform : undefined,
+            parseLogSourceArg(args?.source),
+            typeof args?.lines === 'number' ? args.lines : undefined,
+          ),
+        };
       case 'screenshot':
         return {
           text: runtime.screenshot(typeof args?.platform === 'string' ? args.platform : undefined),

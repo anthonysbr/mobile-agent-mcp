@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { doctorHasFailures, formatDoctorReport } from '../src/driver/doctor.js';
+import { doctorHasFailures, formatDoctorJson, formatDoctorReport } from '../src/driver/doctor.js';
 
 describe('doctor report', () => {
   it('renders OK/WARN/FAIL prefixes', () => {
@@ -14,5 +14,10 @@ describe('doctor report', () => {
   it('flags failures only on fail status', () => {
     expect(doctorHasFailures([{ name: 'a', status: 'warn', message: '' }])).toBe(false);
     expect(doctorHasFailures([{ name: 'a', status: 'fail', message: '' }])).toBe(true);
+  });
+
+  it('formatDoctorJson returns parseable JSON', () => {
+    const json = formatDoctorJson([{ name: 'config', status: 'ok', message: 'found' }]);
+    expect(JSON.parse(json).checks).toHaveLength(1);
   });
 });

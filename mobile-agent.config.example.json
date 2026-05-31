@@ -9,6 +9,11 @@
     "hostEnv": "EXPO_DEV_HOST",
     "outputEnvKey": "EXPO_URL"
   },
+  "log": {
+    "androidPackage": "com.example.app",
+    "metroPort": 8081,
+    "filters": ["ReactNativeJS", "ERROR"]
+  },
   "maestro": {
     "bin": "maestro",
     "defaultEnv": {},
