@@ -15,6 +15,7 @@ export interface RunCommandOptions {
   allowFailure?: boolean;
   encoding?: BufferEncoding | 'buffer';
   timeoutMs?: number;
+  maxBufferBytes?: number;
 }
 
 export function withMaestroPath(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
@@ -36,18 +37,21 @@ export function runCommand(
   options: RunCommandOptions = {},
 ): CommandResult {
   const encoding = options.encoding ?? 'utf-8';
+  const maxBuffer = options.maxBufferBytes ?? 16 * 1024 * 1024;
   const spawnOptions =
     encoding === 'buffer'
       ? {
           cwd: options.cwd,
           env: withMaestroPath(options.env),
           timeout: options.timeoutMs,
+          maxBuffer,
         }
       : ({
           encoding,
           cwd: options.cwd,
           env: withMaestroPath(options.env),
           timeout: options.timeoutMs,
+          maxBuffer,
         } as SpawnSyncOptionsWithStringEncoding);
 
   const result = spawnSync(command, args, spawnOptions);
