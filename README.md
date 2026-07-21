@@ -35,7 +35,7 @@ Resource: `mobile-agent://screenshot/latest`
 
 Responses: [`docs/mcp-response-schema.md`](docs/mcp-response-schema.md). Agent loop: [`docs/agent-skill.md`](docs/agent-skill.md).
 
-**Cursor** (`.cursor/mcp.json`):
+**MCP config:**
 
 ```json
 {

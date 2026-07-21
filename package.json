@@ -1,7 +1,7 @@
 {
   "name": "mobile-agent-mcp",
-  "version": "1.0.1",
-  "description": "Drive iOS sims, Android emulators, and USB devices from Cursor, Claude, or shell. Maestro flows, screenshots, logs, adb, simctl. MCP + CLI.",
+  "version": "1.0.2",
+  "description": "Drive iOS sims, Android emulators, and USB devices via MCP or shell. Maestro flows, screenshots, logs, adb, simctl. MCP + CLI.",
   "license": "MIT",
   "author": {
     "name": "Anthony Batista",
@@ -71,7 +71,6 @@
     "ios",
     "android",
     "expo",
-    "react-native",
-    "cursor"
+    "react-native"
   ]
 }

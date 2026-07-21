@@ -6,7 +6,7 @@ Structured MCP JSON, inline screenshots, `run_flow_with_context`, RN diagnosis, 
 
 ## v1.1 · next
 
-Example repo + demo GIF, installable Cursor skill, optional Maestro Cloud wrapper.
+Example repo + demo GIF, installable agent skill, optional Maestro Cloud wrapper.
 
 ## Not planned
 
