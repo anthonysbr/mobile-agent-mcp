@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows [Semantic Versioning](https://semver.org):
 `MAJOR.MINOR.PATCH`: breaking, feature, or fix.
 
+## [1.0.1] - 2026-07-20
+
+### Fixed
+
+- Removed third party library references from docs.
+- Replaced em dashes in documentation.
+
 ## [1.0.0] - 2026-07-20
 
 ### Added
@@ -39,7 +46,7 @@ All notable changes are documented here. This project follows [Semantic Versioni
 
 ### Changed
 
-- README: when to use this vs `@mobilenext/mobile-mcp`, quick start section.
+- README: quick start section.
 - Removed deprecated `MobileAgentRuntime` / `MobileAgentError` exports.
 
 ## [0.1.1] - 2026-05-30
@@ -68,6 +75,7 @@ All notable changes are documented here. This project follows [Semantic Versioni
 - Per-repo `mobile-agent.config.json` with upward discovery and env overrides.
 - Typed errors with stable exit codes and Zod-validated config.
 
+[1.0.1]: https://github.com/anthonysbr/mobile-agent-mcp/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/anthonysbr/mobile-agent-mcp/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/anthonysbr/mobile-agent-mcp/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/anthonysbr/mobile-agent-mcp/compare/v0.1.0...v0.1.1

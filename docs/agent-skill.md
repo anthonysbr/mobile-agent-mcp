@@ -5,7 +5,7 @@ mobile-agent doctor --json
 mobile-agent run-with-context smoke-login ios --json
 ```
 
-On failure: read `data.diagnosis.suggestedTools`. MCP returns screenshot inline — don't read local PNG paths.
+On failure: read `data.diagnosis.suggestedTools`. MCP returns screenshot inline. Do not read local PNG paths.
 
 ## MCP mapping
 
@@ -22,8 +22,8 @@ On failure: read `data.diagnosis.suggestedTools`. MCP returns screenshot inline 
 
 ## Errors
 
-- `[MAESTRO_NOT_FOUND]` — install Maestro
-- `[FLOW_NOT_FOUND]` — `list_flows`
-- `[LOG_SOURCE_UNAVAILABLE]` — start Metro or fix `log.metroPort`
-- iOS screenshot fail — `boot_simulator`
-- Android Metro unreachable — `adb_reverse 8081`
+- `[MAESTRO_NOT_FOUND]`: install Maestro
+- `[FLOW_NOT_FOUND]`: `list_flows`
+- `[LOG_SOURCE_UNAVAILABLE]`: start Metro or fix `log.metroPort`
+- iOS screenshot fail: `boot_simulator`
+- Android Metro unreachable: `adb_reverse 8081`

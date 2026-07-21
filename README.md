@@ -2,8 +2,6 @@
 
 MCP + CLI for iOS sims, Android emulators, and USB devices. Maestro runs flows; this handles config, doctor, logs, screenshots, RN diagnosis, and Expo/Android host plumbing.
 
-Not for tap-by-coordinates — use [`@mobilenext/mobile-mcp`](https://www.npmjs.com/package/@mobilenext/mobile-mcp). For inline YAML/UI inspection, pair with [Maestro MCP](https://maestro.mobile.dev/).
-
 ## Quick start
 
 ```bash
@@ -16,7 +14,7 @@ Requires Node 20+, [Maestro](https://maestro.mobile.dev/), Xcode (iOS), `adb` (A
 
 ## Config
 
-`mobile-agent.config.json` in repo root — see [`mobile-agent.config.example.json`](mobile-agent.config.example.json), [`examples/expo.config.json`](examples/expo.config.json), [`examples/bare-rn.config.json`](examples/bare-rn.config.json).
+`mobile-agent.config.json` in repo root. See [`mobile-agent.config.example.json`](mobile-agent.config.example.json), [`examples/expo.config.json`](examples/expo.config.json), [`examples/bare-rn.config.json`](examples/bare-rn.config.json).
 
 Set `MOBILE_AGENT_PROJECT_ROOT` if MCP starts from the wrong cwd.
 
@@ -24,7 +22,7 @@ Set `MOBILE_AGENT_PROJECT_ROOT` if MCP starts from the wrong cwd.
 
 | Tool | Purpose |
 |------|---------|
-| `doctor` | Pre-flight |
+| `doctor` | Preflight checks |
 | `run_flow_with_context` | Flow + logs + screenshot + diagnosis |
 | `run_maestro_flow` / `run_smoke_flows` | Flow execution |
 | `screenshot` | PNG + inline image |

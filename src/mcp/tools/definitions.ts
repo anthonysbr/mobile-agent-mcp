@@ -10,7 +10,7 @@ const ENVELOPE_HINT =
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'doctor',
-    description: `Pre-flight checks for config, flows, Maestro, adb/simctl, log sources. ${ENVELOPE_HINT}`,
+    description: `Preflight checks for config, flows, Maestro, adb/simctl, log sources. ${ENVELOPE_HINT}`,
     inputSchema: { type: 'object', properties: {} },
   },
   {
