@@ -46,7 +46,7 @@
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "prepare": "pnpm build",
+    "prepare": "tsc",
     "prepublishOnly": "tsc"
   },
   "dependencies": {
