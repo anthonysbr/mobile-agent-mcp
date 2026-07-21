@@ -2,9 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Platform, ResolvedConfig } from '../config.js';
 import { AgentError, ErrorCode } from '../errors.js';
+import type { ScreenshotResult } from '../results/types.js';
+import { makeScreenshotResult } from './artifacts.js';
 import { runCommand } from './exec.js';
 
-export function captureScreenshot(config: ResolvedConfig, platform: Platform): string {
+export function captureScreenshot(config: ResolvedConfig, platform: Platform): ScreenshotResult {
   fs.mkdirSync(config.screenshotDir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const outputPath = path.join(config.screenshotDir, `${platform}-${timestamp}.png`);
@@ -31,5 +33,16 @@ export function captureScreenshot(config: ResolvedConfig, platform: Platform): s
     fs.writeFileSync(outputPath, result.stdoutBuffer);
   }
 
-  return outputPath;
+  return makeScreenshotResult(outputPath, platform);
+}
+
+export function captureScreenshotSafe(
+  config: ResolvedConfig,
+  platform: Platform,
+): ScreenshotResult | null {
+  try {
+    return captureScreenshot(config, platform);
+  } catch {
+    return null;
+  }
 }

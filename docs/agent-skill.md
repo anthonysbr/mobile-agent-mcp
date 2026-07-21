@@ -1,66 +1,29 @@
-# Mobile loop for agents
-
-Use when the agent should drive a simulator, emulator, or USB device.
-
-## Prerequisites
-
-Maestro installed. `mobile-agent.config.json` in the repo. Metro/API up if the flow needs them. Sim booted or Android on USB.
-
-## Typical loop
+# Agent loop
 
 ```bash
-mobile-agent doctor          # stop on FAIL
-mobile-agent devices
-mobile-agent list-flows
-mobile-agent open-dev-url ios   # skip if the flow launches the app
-mobile-agent run smoke-login ios -e APP_ID=com.example.app
-mobile-agent screenshot ios
-mobile-agent logs ios --lines 100 --source sim
+mobile-agent doctor --json
+mobile-agent run-with-context smoke-login ios --json
 ```
 
-If the flow fails, read logs before editing code:
+On failure: read `data.diagnosis.suggestedTools`. MCP returns screenshot inline — don't read local PNG paths.
 
-```bash
-mobile-agent logs android --source logcat --lines 150
-mobile-agent logs ios --source sim --lines 150
-```
-
-All flows in config:
-
-```bash
-mobile-agent run-all ios
-```
-
-Android USB when the phone can't reach your Mac on Wi‑Fi:
-
-```bash
-mobile-agent adb-reverse 8081 4000
-MAESTRO_DEVICE=<serial> mobile-agent run smoke-login android
-```
-
-## MCP equivalents
+## MCP mapping
 
 | Shell | MCP |
 |-------|-----|
-| `doctor` | `doctor` |
-| `doctor --json` | `doctor` `{ "json": true }` |
-| `list-flows` | `list_flows` |
-| `logs ios --source sim` | `tail_logs` `{ "platform": "ios", "source": "sim", "lines": 100 }` |
-| `devices` | `list_devices` |
-| `screenshot ios` | `screenshot` `{ "platform": "ios" }` |
-| `run foo ios` | `run_maestro_flow` `{ "flow": "foo", "platform": "ios" }` |
+| `doctor --json` | `doctor` |
+| `run-with-context foo ios` | `run_flow_with_context` `{ "flow": "foo", "platform": "ios" }` |
 | `run-all ios` | `run_smoke_flows` |
+| `logs ios --duration-ms 3000` | `collect_logs` |
+| `screenshot ios` | `screenshot` |
+| `metro-status` | `metro_status` |
+| `boot-simulator` | `boot_simulator` |
 | `adb-reverse 8081` | `adb_reverse` `{ "ports": [8081] }` |
-| `open-url URL ios` | `open_url` |
-| `open-dev-url ios` | `open_dev_url` |
 
-## Troubleshooting
+## Errors
 
-- `[CONFIG_INVALID]`: fix JSON in config
-- `[MAESTRO_NOT_FOUND]`: install Maestro
-- `[FLOW_NOT_FOUND]`: wrong name or `flowsDir`; try `list-flows`
-- `[LOG_SOURCE_UNAVAILABLE]`: Metro not running or wrong port in `log.metroPort`
-- iOS screenshot fails: boot the Simulator first
-- Android can't reach Metro: `adb-reverse` on 8081 (and API port if needed)
-
-Don't commit screenshots with real user data on screen.
+- `[MAESTRO_NOT_FOUND]` — install Maestro
+- `[FLOW_NOT_FOUND]` — `list_flows`
+- `[LOG_SOURCE_UNAVAILABLE]` — start Metro or fix `log.metroPort`
+- iOS screenshot fail — `boot_simulator`
+- Android Metro unreachable — `adb_reverse 8081`

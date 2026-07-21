@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import type { Platform, ResolvedConfig } from '../config.js';
 import { AgentError, ErrorCode } from '../errors.js';
+import type { LogSnapshot } from '../results/types.js';
 import { commandExists, runCommand } from './exec.js';
 
 export type LogSource = 'metro' | 'logcat' | 'sim' | 'auto';
@@ -10,6 +11,13 @@ export interface TailLogsOptions {
   source?: LogSource;
   lines?: number;
 }
+
+export interface CollectLogsOptions extends TailLogsOptions {
+  durationMs?: number;
+}
+
+const MAX_COLLECT_DURATION_MS = 10_000;
+const COLLECT_POLL_MS = 500;
 
 export function resolveLogSource(
   platform: Platform,
@@ -53,7 +61,7 @@ export function isMetroPortOpen(port: number): boolean {
   return result.status === 0;
 }
 
-function tailLogcat(config: ResolvedConfig, lines: number): string {
+function tailLogcatText(config: ResolvedConfig, lines: number): string {
   if (!commandExists('adb')) {
     throw new AgentError('adb not installed', ErrorCode.TOOL_UNAVAILABLE);
   }
@@ -77,14 +85,14 @@ function tailLogcat(config: ResolvedConfig, lines: number): string {
   return output;
 }
 
-function tailSim(lines: number, filters: string[] | undefined): string {
+function tailSimText(lines: number, filters: string[] | undefined): string {
   if (process.platform !== 'darwin') {
     throw new AgentError('iOS sim logs require macOS', ErrorCode.TOOL_UNAVAILABLE);
   }
 
   const result = runCommand('log', ['show', '--style', 'compact', '--last', '1m'], {
     allowFailure: true,
-    timeoutMs: 15000,
+    timeoutMs: 15_000,
   });
 
   const rows = (result.stdout || result.stderr).split('\n').slice(-lines);
@@ -92,21 +100,37 @@ function tailSim(lines: number, filters: string[] | undefined): string {
   return output.trim() || 'sim: no log lines in the last minute';
 }
 
-function tailMetro(config: ResolvedConfig, platform: Platform, lines: number): string {
-  const port = metroPort(config);
-  const up = isMetroPortOpen(port);
-  const header = up ? `Metro reachable on port ${port}` : `Metro not responding on port ${port}`;
-
-  if (!up) {
-    throw new AgentError(header, ErrorCode.LOG_SOURCE_UNAVAILABLE);
-  }
-
-  const filters = config.log?.filters ?? ['ReactNative', 'Expo', 'Metro'];
-  const body = platform === 'android' ? tailLogcat(config, lines) : tailSim(lines, filters);
-  return `${header}\n\n${body}`;
+function buildSnapshot(
+  platform: Platform,
+  source: Exclude<LogSource, 'auto'>,
+  text: string,
+  metroReachable?: boolean,
+): LogSnapshot {
+  const lines = text.split('\n').filter((line) => line.length > 0);
+  return {
+    platform,
+    source,
+    text,
+    lineCount: lines.length,
+    truncated: false,
+    metroReachable,
+  };
 }
 
-export function tailLogs(config: ResolvedConfig, options: TailLogsOptions): string {
+function tailMetroSnapshot(config: ResolvedConfig, platform: Platform, lines: number): LogSnapshot {
+  const port = metroPort(config);
+  const up = isMetroPortOpen(port);
+  const filters = config.log?.filters ?? ['ReactNative', 'Expo', 'Metro'];
+
+  if (!up) {
+    throw new AgentError(`Metro not responding on port ${port}`, ErrorCode.LOG_SOURCE_UNAVAILABLE);
+  }
+
+  const body = platform === 'android' ? tailLogcatText(config, lines) : tailSimText(lines, filters);
+  return buildSnapshot(platform, 'metro', body, true);
+}
+
+export function tailLogsSnapshot(config: ResolvedConfig, options: TailLogsOptions): LogSnapshot {
   const lines = options.lines ?? 100;
   const source = resolveLogSource(options.platform, options.source);
 
@@ -114,17 +138,57 @@ export function tailLogs(config: ResolvedConfig, options: TailLogsOptions): stri
     if (options.platform !== 'android') {
       throw new AgentError('logcat is Android only', ErrorCode.VALIDATION);
     }
-    return tailLogcat(config, lines);
+    return buildSnapshot(options.platform, 'logcat', tailLogcatText(config, lines));
   }
 
   if (source === 'sim') {
     if (options.platform !== 'ios') {
       throw new AgentError('sim logs are iOS only', ErrorCode.VALIDATION);
     }
-    return tailSim(lines, config.log?.filters);
+    return buildSnapshot(options.platform, 'sim', tailSimText(lines, config.log?.filters));
   }
 
-  return tailMetro(config, options.platform, lines);
+  return tailMetroSnapshot(config, options.platform, lines);
+}
+
+export function tailLogs(config: ResolvedConfig, options: TailLogsOptions): string {
+  const snapshot = tailLogsSnapshot(config, options);
+  if (snapshot.metroReachable === false) {
+    return `Metro not responding\n\n${snapshot.text}`;
+  }
+  if (snapshot.metroReachable) {
+    return `Metro reachable\n\n${snapshot.text}`;
+  }
+  return snapshot.text;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function collectLogs(
+  config: ResolvedConfig,
+  options: CollectLogsOptions,
+): Promise<LogSnapshot> {
+  const durationMs = Math.min(options.durationMs ?? 0, MAX_COLLECT_DURATION_MS);
+  const lines = options.lines ?? 100;
+
+  if (durationMs <= 0) {
+    return tailLogsSnapshot(config, options);
+  }
+
+  const deadline = Date.now() + durationMs;
+  let latest = tailLogsSnapshot(config, { ...options, lines });
+
+  while (Date.now() < deadline) {
+    await sleep(COLLECT_POLL_MS);
+    const next = tailLogsSnapshot(config, { ...options, lines });
+    if (next.text !== latest.text) {
+      latest = { ...next, truncated: next.lineCount >= lines };
+    }
+  }
+
+  return { ...latest, truncated: latest.lineCount >= lines };
 }
 
 export function tailLogsFollow(config: ResolvedConfig, options: TailLogsOptions): Promise<number> {
@@ -200,3 +264,5 @@ export function checkSimLogAvailable(): { ok: boolean; message: string } {
     message: hasBooted ? 'sim log stream ready' : 'no booted iOS simulator',
   };
 }
+
+export { metroPort };

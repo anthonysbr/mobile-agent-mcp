@@ -1,6 +1,6 @@
 {
   "name": "mobile-agent-mcp",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Drive iOS sims, Android emulators, and USB devices from Cursor, Claude, or shell. Maestro flows, screenshots, logs, adb, simctl. MCP + CLI.",
   "license": "MIT",
   "author": {

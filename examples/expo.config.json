@@ -1,0 +1,27 @@
+{
+  "projectRoot": ".",
+  "flowsDir": "e2e/maestro/flows",
+  "screenshotDir": "artifacts/mobile-screenshots",
+  "smokeFlows": ["smoke-launch", "smoke-tabs"],
+  "devServerUrl": {
+    "scheme": "exp",
+    "port": 8081,
+    "hostEnv": "EXPO_DEV_HOST",
+    "outputEnvKey": "EXPO_URL"
+  },
+  "log": {
+    "androidPackage": "com.example.expoapp",
+    "metroPort": 8081,
+    "filters": ["ReactNativeJS", "Expo", "ERROR"]
+  },
+  "maestro": {
+    "bin": "maestro",
+    "defaultEnv": {
+      "APP_ID": "com.example.expoapp"
+    },
+    "appId": {
+      "ios": "com.example.expoapp",
+      "android": "com.example.expoapp"
+    }
+  }
+}

@@ -110,5 +110,14 @@ export function doctorHasFailures(checks: DoctorCheck[]): boolean {
 }
 
 export function formatDoctorJson(checks: DoctorCheck[]): string {
-  return JSON.stringify({ checks }, null, 2);
+  return JSON.stringify(buildDoctorResult(checks), null, 2);
+}
+
+export function buildDoctorResult(checks: DoctorCheck[]) {
+  const blockers = checks.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.message}`);
+  return {
+    checks,
+    hasFailures: blockers.length > 0,
+    blockers,
+  };
 }

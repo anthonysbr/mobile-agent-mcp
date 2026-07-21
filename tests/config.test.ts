@@ -10,7 +10,7 @@ import {
   parsePorts,
 } from '../src/config.js';
 import { AgentError, ErrorCode } from '../src/errors.js';
-import { handleMcpToolCall } from '../src/mcp/tools.js';
+import { handleMcpToolCallAsync } from '../src/mcp/tools.js';
 import { createRuntime } from '../src/runtime.js';
 
 const tempDirs: string[] = [];
@@ -91,10 +91,10 @@ describe('config', () => {
 });
 
 describe('mcp', () => {
-  it('unknown tool → isError', () => {
+  it('unknown tool → isError', async () => {
     const runtime = createRuntime({ startDir: process.cwd() });
-    const result = handleMcpToolCall(runtime, 'nope', {});
+    const result = await handleMcpToolCallAsync(runtime, 'nope', {});
     expect(result.isError).toBe(true);
-    expect(result.text).toContain('Unknown tool');
+    expect(result.content[0].text).toContain('Unknown tool');
   });
 });

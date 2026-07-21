@@ -74,12 +74,15 @@ describe('runMaestroFlow', () => {
       maestroAppIds: { ios: 'com.example.ios' },
     });
 
-    runMaestroFlow(config, {
+    const result = runMaestroFlow(config, {
       flow: 'login',
       platform: 'ios',
       env: { EXTRA: '2' },
       captureAfter: false,
     });
+
+    expect(result.ok).toBe(true);
+    expect(result.flow).toBe('login');
 
     const call = maestroCall();
     expect(call).toBeDefined();

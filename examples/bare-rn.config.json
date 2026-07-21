@@ -1,0 +1,21 @@
+{
+  "projectRoot": ".",
+  "flowsDir": "e2e/maestro/flows",
+  "screenshotDir": "artifacts/mobile-screenshots",
+  "smokeFlows": ["smoke-login", "smoke-logout"],
+  "log": {
+    "androidPackage": "com.example.app",
+    "metroPort": 8081,
+    "filters": ["ReactNativeJS", "ERROR", "Metro"]
+  },
+  "maestro": {
+    "bin": "maestro",
+    "defaultEnv": {
+      "APP_ID": "com.example.app"
+    },
+    "appId": {
+      "ios": "com.example.app.ios",
+      "android": "com.example.app"
+    }
+  }
+}

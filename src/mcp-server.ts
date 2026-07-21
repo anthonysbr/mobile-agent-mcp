@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { handleMcpToolCall, MCP_TOOLS } from './mcp/tools.js';
+import {
+  CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ListToolsRequestSchema,
+  ReadResourceRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import { listScreenshotResources, readScreenshotResource } from './mcp/resources.js';
+import { handleMcpToolCallAsync, MCP_TOOLS } from './mcp/tools.js';
 import { createRuntime } from './runtime.js';
 import { PACKAGE_NAME, PACKAGE_VERSION } from './version.js';
 
@@ -10,23 +16,34 @@ const runtime = createRuntime();
 
 const server = new Server(
   { name: PACKAGE_NAME, version: PACKAGE_VERSION },
-  { capabilities: { tools: {} } },
+  { capabilities: { tools: {}, resources: {} } },
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: MCP_TOOLS,
 }));
 
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: listScreenshotResources(),
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri !== 'mobile-agent://screenshot/latest') {
+    throw new Error(`Unknown resource: ${request.params.uri}`);
+  }
+  return readScreenshotResource(runtime.artifacts);
+});
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  const result = handleMcpToolCall(
+  const result = await handleMcpToolCallAsync(
     runtime,
     name,
     (args as Record<string, unknown> | undefined) ?? undefined,
   );
 
   return {
-    content: [{ type: 'text', text: result.text }],
+    content: result.content,
     ...(result.isError ? { isError: true } : {}),
   };
 });

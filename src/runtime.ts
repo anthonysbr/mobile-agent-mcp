@@ -1,24 +1,57 @@
 import { assertPlatform, type LoadConfigOptions, loadConfig } from './config.js';
 import { adbReverse } from './driver/adb.js';
+import { ArtifactRegistry } from './driver/artifacts.js';
 import { resolveDevServerEnv } from './driver/dev-server.js';
 import { listDevices } from './driver/devices.js';
 import {
-  type DoctorCheck,
+  buildDoctorResult,
   doctorHasFailures,
-  formatDoctorJson,
   formatDoctorReport,
   runDoctor,
 } from './driver/doctor.js';
+import { type FlowTemplate, validateFlow, writeFlow } from './driver/flow-io.js';
 import { formatFlowList, listFlows } from './driver/flows.js';
-import { type LogSource, tailLogs, tailLogsFollow } from './driver/logs.js';
-import { runMaestroFlow, runMaestroFlows } from './driver/maestro.js';
+import {
+  tailLogsSnapshot as captureLogSnapshot,
+  collectLogs,
+  type LogSource,
+  tailLogsFollow,
+} from './driver/logs.js';
+import {
+  runMaestroFlowCore,
+  runMaestroFlows,
+  runMaestroFlowWithContext,
+} from './driver/maestro.js';
+import { getMetroStatus, reloadApp } from './driver/metro.js';
 import { openUrl } from './driver/open-url.js';
 import { captureScreenshot } from './driver/screenshot.js';
+import { bootSimulator } from './driver/simulator.js';
 import { AgentError, ErrorCode } from './errors.js';
+import {
+  formatDoctorSummary,
+  formatFlowContextHuman,
+  formatFlowRunHuman,
+  formatLogSnapshotHuman,
+  formatSmokeRunHuman,
+} from './results/format.js';
+import type {
+  BootSimulatorResult,
+  DoctorResult,
+  FlowRunContextResult,
+  FlowRunResult,
+  LogSnapshot,
+  MetroStatusResult,
+  ReloadAppResult,
+  ScreenshotResult,
+  SmokeRunResult,
+  ValidateFlowResult,
+  WriteFlowResult,
+} from './results/types.js';
 
 export class Runtime {
+  readonly artifacts = new ArtifactRegistry();
   private config: ReturnType<typeof loadConfig>;
-  private lastDoctor: DoctorCheck[] | null = null;
+  private lastDoctor: DoctorResult | null = null;
 
   constructor(private readonly options: LoadConfigOptions = {}) {
     this.config = loadConfig(this.options);
@@ -26,6 +59,11 @@ export class Runtime {
 
   private cfg() {
     return this.config;
+  }
+
+  private recordScreenshot(result: ScreenshotResult): ScreenshotResult {
+    this.artifacts.recordScreenshot(result);
+    return result;
   }
 
   listDevices() {
@@ -37,15 +75,39 @@ export class Runtime {
     return formatFlowList(config.flowsDir, listFlows(config.flowsDir));
   }
 
-  screenshot(platform?: string) {
-    return captureScreenshot(this.cfg(), assertPlatform(platform));
+  screenshot(platform?: string): ScreenshotResult {
+    const result = captureScreenshot(this.cfg(), assertPlatform(platform));
+    return this.recordScreenshot(result);
   }
 
-  tailLogs(platform?: string, source?: LogSource, lines?: number) {
-    return tailLogs(this.cfg(), {
+  tailLogs(platform?: string, source?: LogSource, lines?: number): string {
+    const snapshot = captureLogSnapshot(this.cfg(), {
       platform: assertPlatform(platform),
       source,
       lines,
+    });
+    return formatLogSnapshotHuman(snapshot);
+  }
+
+  tailLogsSnapshot(platform?: string, source?: LogSource, lines?: number): LogSnapshot {
+    return captureLogSnapshot(this.cfg(), {
+      platform: assertPlatform(platform),
+      source,
+      lines,
+    });
+  }
+
+  async collectLogs(
+    platform?: string,
+    source?: LogSource,
+    lines?: number,
+    durationMs?: number,
+  ): Promise<LogSnapshot> {
+    return collectLogs(this.cfg(), {
+      platform: assertPlatform(platform),
+      source,
+      lines,
+      durationMs,
     });
   }
 
@@ -56,15 +118,37 @@ export class Runtime {
     });
   }
 
-  runFlow(flow: string, platform?: string, env?: Record<string, string>) {
-    return runMaestroFlow(this.cfg(), {
+  runFlow(flow: string, platform?: string, env?: Record<string, string>): FlowRunResult {
+    const result = runMaestroFlowCore(this.cfg(), {
       flow,
       platform: assertPlatform(platform),
       env,
     });
+    if (result.screenshot) {
+      this.recordScreenshot(result.screenshot);
+    }
+    return result;
   }
 
-  runSmoke(platform?: string, env?: Record<string, string>) {
+  runFlowWithContext(
+    flow: string,
+    platform?: string,
+    env?: Record<string, string>,
+    logLines?: number,
+  ): FlowRunContextResult {
+    const result = runMaestroFlowWithContext(this.cfg(), {
+      flow,
+      platform: assertPlatform(platform),
+      env,
+      logLines,
+    });
+    if (result.screenshot) {
+      this.recordScreenshot(result.screenshot);
+    }
+    return result;
+  }
+
+  runSmoke(platform?: string, env?: Record<string, string>): SmokeRunResult {
     const config = this.cfg();
     if (!config.smokeFlows.length) {
       throw new AgentError(
@@ -72,10 +156,16 @@ export class Runtime {
         ErrorCode.NOT_CONFIGURED,
       );
     }
-    return runMaestroFlows(config, config.smokeFlows, {
+    const result = runMaestroFlows(config, config.smokeFlows, {
       platform: assertPlatform(platform),
       env,
     });
+    for (const fail of result.failed) {
+      if (fail.screenshot) {
+        this.recordScreenshot(fail.screenshot);
+      }
+    }
+    return result;
   }
 
   adbReverse(ports?: number[]) {
@@ -95,19 +185,63 @@ export class Runtime {
     return openUrl(url, assertPlatform(platform));
   }
 
+  metroStatus(): MetroStatusResult {
+    return getMetroStatus(this.cfg());
+  }
+
+  reloadApp(): ReloadAppResult {
+    return reloadApp(this.cfg());
+  }
+
+  bootSimulator(deviceName?: string): BootSimulatorResult {
+    return bootSimulator(deviceName);
+  }
+
+  validateFlow(flow: string): ValidateFlowResult {
+    return validateFlow(this.cfg(), flow);
+  }
+
+  writeFlow(
+    flow: string,
+    content?: string,
+    template?: FlowTemplate,
+    overwrite?: boolean,
+  ): WriteFlowResult {
+    return writeFlow(this.cfg(), flow, content, template, overwrite);
+  }
+
+  doctorStructured(): DoctorResult {
+    this.lastDoctor = buildDoctorResult(runDoctor(this.cfg()));
+    return this.lastDoctor;
+  }
+
   doctor() {
-    this.lastDoctor = runDoctor(this.cfg());
-    return formatDoctorReport(this.lastDoctor);
+    return formatDoctorReport(this.doctorStructured().checks);
   }
 
   doctorJson() {
-    this.lastDoctor = runDoctor(this.cfg());
-    return formatDoctorJson(this.lastDoctor);
+    return JSON.stringify(this.doctorStructured(), null, 2);
   }
 
   doctorFailed() {
-    const checks = this.lastDoctor ?? runDoctor(this.cfg());
-    return doctorHasFailures(checks);
+    const result = this.lastDoctor ?? this.doctorStructured();
+    return doctorHasFailures(result.checks);
+  }
+
+  formatFlowRun(result: FlowRunResult): string {
+    return formatFlowRunHuman(result);
+  }
+
+  formatFlowContext(result: FlowRunContextResult): string {
+    return formatFlowContextHuman(result);
+  }
+
+  formatSmokeRun(result: SmokeRunResult): string {
+    return formatSmokeRunHuman(result);
+  }
+
+  formatDoctor(result: DoctorResult): string {
+    return formatDoctorSummary(result.checks);
   }
 }
 
