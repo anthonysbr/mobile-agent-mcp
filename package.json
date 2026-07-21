@@ -47,7 +47,7 @@
     "format": "biome check --write src tests",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "prepare": "pnpm build",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
